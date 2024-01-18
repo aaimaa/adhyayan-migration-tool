@@ -10,7 +10,19 @@ CORS(app)
 
 @app.route('/', methods=['GET'])
 def hello():
-    return '<h1>This is the api for converting a video url to a different aspect ratio!</h1>'
+    html = '''<h1>Video Operations API</h1>
+
+    <section>
+        <h2>About</h2>
+        <p>This repo contains a simple Python API that converts a given video source URL:</p>
+        <ul>
+            <li><code>/convert-resolution</code> - Converts to different resolutions & uploads directly to your S3 storage.</li>
+            <li><code>/convert-hls</code> - Converts to HLS format and uploads it directly to your S3 storage.</li>
+            <li><code>/upload</code> - Uploads the video directly to your S3 storage.</li>
+        </ul>
+    </section>
+'''
+    return html
 
 @app.route('/upload', methods=['POST'])
 def upload_endpoint():
