@@ -3,8 +3,8 @@ from flask_cors import CORS
 import pandas as pd
 from io import StringIO
 
-
 from ffmpeg_convertor import convert_video_resolution
+from ffmpeg_convertor import convert_video_resolution_r2
 from ffmpeg_convertor import convert_video_hls
 from ffmpeg_convertor import upload_to_s3
 from ffmpeg_convertor import upload_to_r2
@@ -86,13 +86,19 @@ def upload_csv_endpoint():
 def convertor_endpoint():
     try:
         data = request.get_json()
+        print('data after getting it on server: ', data)
         aws_access_key_id = data['aws_access_key_id']
         aws_secret_access_key = data['aws_secret_access_key']
         region_name = data['region_name']
         destination_bucket = data['destination_bucket']
         source_link = data['source_link']
         
-        result = convert_video_resolution(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        endpoint_url = data['endpoint_url']
+        
+        if endpoint_url.strip() == "":
+            result = convert_video_resolution(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        else:
+            result = convert_video_resolution_r2(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name,endpoint_url=endpoint_url)
         
         return jsonify({'result': result})
     except Exception as e:

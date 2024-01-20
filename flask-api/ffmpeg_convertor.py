@@ -86,6 +86,53 @@ def convert_video_resolution(aws_access_key_id, aws_secret_access_key, region_na
             print(f"Successfully converted and copied '{s3_source_key}' from '{s3_source_bucket}' to '{destination_key}' in '{destination_bucket}'.")
     except Exception as e:
         print(f"Error converting video: {e}")
+   
+def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link, endpoint_url):
+    
+    # split_str = source_link.split('/')
+    # s3_source_bucket = split_str[2].split('.')[0]
+    # s3_source_key = split_str[3]
+    # s3_source_basename = split_str[3].split('.')[0]
+    
+    # file_name = source_link.split('/')[-1]
+    s3_source_basename = source_link.split('/')[-1].split('.')[0]
+    
+    # boto3.setup_default_session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
+    
+    # Check if ffmpeg is installed
+    try:
+        subprocess.run(['ffmpeg', '-version'], check=True)
+    except FileNotFoundError:
+        print("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
+        return
+
+    # s3 = boto3.client('s3')
+    
+    resolutionsTuple = [
+        ('426:240:flags=lanczos', '240'),
+        ('640:360:flags=lanczos', '360'),
+        ('854:480:flags=lanczos', '480'),
+        ('1280:720:flags=lanczos', '720')
+    ]
+    
+    try: 
+        for resolution in resolutionsTuple:
+            scale, res_scale = resolution
+            s3_destination_filename = f'output_{res_scale}.mp4'
+            destination_key = f"{s3_source_basename}/{res_scale}/{s3_destination_filename}"
+            
+            ffmpeg_command = f"ffmpeg -y -i {source_link} -vf 'scale={scale}' -c:a copy -c:v libx264 -profile:v high -level:v 4.2 -crf 18 -movflags frag_keyframe+empty_moov -f mp4 -"
+
+            # try:
+            # Open a stream for the FFmpeg command
+            with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, shell=True) as process:
+                    # Upload the stream to the destination S3 bucket
+                    s3.upload_fileobj(process.stdout, destination_bucket, destination_key)
+
+            print(f"Successfully converted and copied '{source_link}' to '{destination_key}' in '{destination_bucket}'.")
+    except Exception as e:
+        print(f"Error converting video: {e}")
 
 def convert_video_hls(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link):
     print("Current working directory:", os.getcwd())
