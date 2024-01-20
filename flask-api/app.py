@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS  
+import pandas as pd
+from io import StringIO
+
 
 from ffmpeg_convertor import convert_video_resolution
 from ffmpeg_convertor import convert_video_hls
@@ -37,6 +40,38 @@ def upload_endpoint():
         result = upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
         
         return jsonify({'result': result})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+
+@app.route('/upload-csv', methods=['POST'])
+def upload_csv_endpoint():
+    try:
+        data = request.form.to_dict()
+        aws_access_key_id = data['aws_access_key_id']
+        aws_secret_access_key = data['aws_secret_access_key']
+        region_name = data['region_name']
+        destination_bucket = data['destination_bucket']
+
+        # Check if 'csv_file' is provided
+        if 'csv_file' in request.files:
+            csv_file = request.files['csv_file']
+            csv_content = csv_file.read().decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content), header=None)
+            source_links = df[0].tolist()
+
+            result = []
+            for source_link in source_links:
+                result.append(upload_to_s3(destination_bucket=destination_bucket,
+                                           source_url=source_link,
+                                           aws_access_key_id=aws_access_key_id,
+                                           aws_secret_access_key=aws_secret_access_key,
+                                           region_name=region_name))
+
+            return jsonify({'result': result})
+        else:
+            return jsonify({'error': 'CSV file not provided'})
+
     except Exception as e:
         return jsonify({'error': str(e)})
 

@@ -95,7 +95,7 @@ def main():
     # copy_object(source_bucket, source_key, destination_bucket, destination_key)
 
     # Convert and copy the video in the destination bucket
-    convert_and_copy_video(aws_access_key_id, aws_secret_access_key, region_name,destination_bucket, destination_key, destination_bucket, destination_key, source_link)
+    convert_and_copy_video(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, destination_key, destination_bucket, destination_key, source_link)
 
 if __name__ == "__main__":
     main()
