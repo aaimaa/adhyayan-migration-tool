@@ -59,6 +59,7 @@ def upload_csv_endpoint():
         aws_secret_access_key = data['aws_secret_access_key']
         region_name = data['region_name']
         destination_bucket = data['destination_bucket']
+        endpoint_url = data['endpoint_url']
 
         # Check if 'csv_file' is provided
         if 'csv_file' in request.files:
@@ -74,6 +75,10 @@ def upload_csv_endpoint():
                                            aws_access_key_id=aws_access_key_id,
                                            aws_secret_access_key=aws_secret_access_key,
                                            region_name=region_name))
+                if endpoint_url.strip() == "":
+                    result.append(upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name))
+                else:
+                    result.append(upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region=region_name, endpoint_url=endpoint_url))
 
             return jsonify({'result': result})
         else:
