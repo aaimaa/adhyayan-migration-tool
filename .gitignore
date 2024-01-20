@@ -1,4 +1,5 @@
 .env
+local.sh
 script.py
 script2.py
 test.html
