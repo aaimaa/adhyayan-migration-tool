@@ -32,16 +32,19 @@ def hello():
 def upload_endpoint():
     try:
         data = request.get_json()
+        print("recieved data: ", data)
         aws_access_key_id = data['aws_access_key_id']
         aws_secret_access_key = data['aws_secret_access_key']
         region_name = data['region_name']
         destination_bucket = data['destination_bucket']
         source_link = data['source_link']
         
-        
         endpoint_url = data['endpoint_url']
         
-        result = upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        if endpoint_url.strip() == "":
+            result = upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        else:
+            result = upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
         
         return jsonify({'result': result})
     except Exception as e:
