@@ -89,15 +89,8 @@ def convert_video_resolution(aws_access_key_id, aws_secret_access_key, region_na
    
 def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link, endpoint_url):
     
-    # split_str = source_link.split('/')
-    # s3_source_bucket = split_str[2].split('.')[0]
-    # s3_source_key = split_str[3]
-    # s3_source_basename = split_str[3].split('.')[0]
-    
-    # file_name = source_link.split('/')[-1]
     s3_source_basename = source_link.split('/')[-1].split('.')[0]
     
-    # boto3.setup_default_session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
     s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
     
     # Check if ffmpeg is installed
@@ -106,8 +99,6 @@ def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region
     except FileNotFoundError:
         print("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
         return
-
-    # s3 = boto3.client('s3')
     
     resolutionsTuple = [
         ('426:240:flags=lanczos', '240'),
@@ -134,7 +125,7 @@ def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region
     except Exception as e:
         print(f"Error converting video: {e}")
 
-def convert_video_hls(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link):
+def convert_video_hsl(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link, endpoint_url):
     print("Current working directory:", os.getcwd())
     try:
         # Check if FFmpeg is installed
@@ -145,15 +136,24 @@ def convert_video_hls(aws_access_key_id, aws_secret_access_key, region_name, des
         raise Exception("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
 
     split_str = source_link.split('/')
-    s3_source_key = split_str[3]
-    s3_source_basename = split_str[3].split('.')[0]
-
-    s3_client = boto3.client(
-        service_name="s3",
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name=region_name
-    )
+    # s3_source_key = split_str[3]
+    s3_source_basename = split_str[-1].split('.')[0]
+    
+    if endpoint_url == '':
+        s3_client = boto3.client(
+            service_name="s3",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name
+        )
+    else:
+        s3_client = boto3.client(
+            service_name="s3",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name,
+            endpoint_url=endpoint_url
+        )
 
     resolution_dict = {
         '720p': "1280:720",

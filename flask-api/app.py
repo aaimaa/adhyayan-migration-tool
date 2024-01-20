@@ -5,7 +5,7 @@ from io import StringIO
 
 from ffmpeg_convertor import convert_video_resolution
 from ffmpeg_convertor import convert_video_resolution_r2
-from ffmpeg_convertor import convert_video_hls
+from ffmpeg_convertor import convert_video_hsl
 from ffmpeg_convertor import upload_to_s3
 from ffmpeg_convertor import upload_to_r2
 
@@ -135,8 +135,8 @@ def convertor_csv_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-@app.route('/convert-hls', methods=['POST'])
-def convertor_endpoint_hls():
+@app.route('/convert-hsl', methods=['POST'])
+def convertor_endpoint_hsl():
     try:
         data = request.get_json()
         aws_access_key_id = data['aws_access_key_id']
@@ -145,7 +145,9 @@ def convertor_endpoint_hls():
         destination_bucket = data['destination_bucket']
         source_link = data['source_link']
         
-        result = convert_video_hls(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        endpoint_url = data['endpoint_url']
+        
+        result = convert_video_hsl(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
         
         return jsonify({'result': result})
     except Exception as e:
