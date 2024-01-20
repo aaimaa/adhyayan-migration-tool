@@ -159,5 +159,38 @@ def convertor_endpoint_hsl():
     except Exception as e:
         return jsonify({'error': str(e)})
 
+
+@app.route('/convert-hsl-csv', methods=['POST'])
+def convertor_csv_hsl_endpoint():
+    try:
+        data = request.form.to_dict()
+        aws_access_key_id = data['aws_access_key_id']
+        aws_secret_access_key = data['aws_secret_access_key']
+        region_name = data['region_name']
+        destination_bucket = data['destination_bucket']
+        endpoint_url = data['endpoint_url']
+
+        # Check if 'csv_file' is provided
+        if 'csv_file' in request.files:
+            csv_file = request.files['csv_file']
+            csv_content = csv_file.read().decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content), header=None)
+            source_links = df[0].tolist()
+        else:
+            return jsonify({'error': 'CSV file not provided'})
+
+        result = []
+        for source_link in source_links:
+            result.append(convert_video_hsl(destination_bucket=destination_bucket,
+                                            source_link=source_link,
+                                            aws_access_key_id=aws_access_key_id,
+                                            aws_secret_access_key=aws_secret_access_key,
+                                            region_name=region_name,
+                                            endpoint_url=endpoint_url))
+
+        return jsonify({'result': result})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True)
