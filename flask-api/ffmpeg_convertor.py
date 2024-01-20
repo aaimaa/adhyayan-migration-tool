@@ -24,7 +24,27 @@ def upload_to_s3(aws_access_key_id, aws_secret_access_key, region_name, destinat
             print(f"Failed to fetch the file from the URL. HTTP Status Code: {response.status_code}")
     except Exception as e:
         print(f"Error uploading file to S3: {e}")
+        
+def upload_to_r2(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_url, endpoint_url):
+    # Extract the filename from the URL
+    file_name = source_url.split('/')[-1]
 
+    boto3.setup_default_session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
+
+    # Initialize S3 client
+    s3 = boto3.client('s3')
+
+    try:
+        # Stream the file content directly from the URL
+        response = requests.get(source_url, stream=True)
+        if response.status_code == 200:
+            # Upload the streaming content to R2
+            s3.upload_fileobj(response.raw, destination_bucket, file_name)
+            print(f"Successfully streamed and uploaded '{file_name}' to '{destination_bucket}'.")
+        else:
+            print(f"Failed to fetch the file from the URL. HTTP Status Code: {response.status_code}")
+    except Exception as e:
+        print(f"Error uploading file to S3: {e}")
     
 def convert_video_resolution(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link):
     

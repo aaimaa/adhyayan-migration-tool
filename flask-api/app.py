@@ -7,6 +7,7 @@ from io import StringIO
 from ffmpeg_convertor import convert_video_resolution
 from ffmpeg_convertor import convert_video_hls
 from ffmpeg_convertor import upload_to_s3
+from ffmpeg_convertor import upload_to_r2
 
 app = Flask(__name__)
 CORS(app)
@@ -36,6 +37,9 @@ def upload_endpoint():
         region_name = data['region_name']
         destination_bucket = data['destination_bucket']
         source_link = data['source_link']
+        
+        
+        endpoint_url = data['endpoint_url']
         
         result = upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
         
@@ -87,6 +91,37 @@ def convertor_endpoint():
         
         result = convert_video_resolution(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
         
+        return jsonify({'result': result})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    
+
+@app.route('/convert-resolution-csv', methods=['POST'])
+def convertor_csv_endpoint():
+    try:
+        data = request.form.to_dict()
+        aws_access_key_id = data['aws_access_key_id']
+        aws_secret_access_key = data['aws_secret_access_key']
+        region_name = data['region_name']
+        destination_bucket = data['destination_bucket']
+
+        # Check if 'csv_file' is provided
+        if 'csv_file' in request.files:
+            csv_file = request.files['csv_file']
+            csv_content = csv_file.read().decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content), header=None)
+            source_links = df[0].tolist()
+        else:
+            return jsonify({'error': 'CSV file not provided'})
+
+        result = []
+        for source_link in source_links:
+            result.append(convert_video_resolution(destination_bucket=destination_bucket,
+                                                  source_link=source_link,
+                                                  aws_access_key_id=aws_access_key_id,
+                                                  aws_secret_access_key=aws_secret_access_key,
+                                                  region_name=region_name))
+
         return jsonify({'result': result})
     except Exception as e:
         return jsonify({'error': str(e)})
