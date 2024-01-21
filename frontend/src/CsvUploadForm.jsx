@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './CsvUploadForm.css';
 
 const CsvUploadForm = () => {
   const [file, setFile] = useState(null);
@@ -94,11 +95,11 @@ const CsvUploadForm = () => {
   };
 
   return (
-    <div>
-      <h2>CSV File Upload</h2>
-      <form onSubmit={handleFormSubmit}>
+    <div className="csv-upload-form-container">
+      <h2 className='heading'>Video Operations App</h2>
+      <form onSubmit={handleFormSubmit} className="upload-form">
         {/* Upload Option Radio Buttons */}
-        <div>
+        <div className="upload-option">
           <label>
             <input
               type="radio"
@@ -112,7 +113,7 @@ const CsvUploadForm = () => {
             <input type="file" accept=".csv" onChange={handleFileChange} />
           )}
         </div>
-        <div>
+        <div className="upload-option">
           <label>
             <input
               type="radio"
@@ -132,11 +133,12 @@ const CsvUploadForm = () => {
         </div>
 
         {/* Action Dropdown */}
-        <div>
+        <div className="action-option">
           <label>Action:</label>
           <select
             value={actionOption}
             onChange={(e) => handleActionOptionChange(e.target.value)}
+            className="action-select"
           >
             <option value="upload">Upload to S3/R2</option>
             <option value="convertResolution">Convert Video Resolution</option>
@@ -145,54 +147,56 @@ const CsvUploadForm = () => {
         </div>
 
         {/* AWS Credentials and Other Input Fields */}
-        <div>
-          <label htmlFor="awsAccessKeyId">AWS Access Key ID:</label>
-          <input
-            type="text"
-            id="awsAccessKeyId"
-            value={awsAccessKeyId}
-            onChange={(e) => setAwsAccessKeyId(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="awsSecretAccessKey">AWS Secret Access Key:</label>
-          <input
-            type="text"
-            id="awsSecretAccessKey"
-            value={awsSecretAccessKey}
-            onChange={(e) => setAwsSecretAccessKey(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="regionName">Region Name:</label>
-          <input
-            type="text"
-            id="regionName"
-            value={regionName}
-            onChange={(e) => setRegionName(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="destinationBucket">Destination Bucket:</label>
-          <input
-            type="text"
-            id="destinationBucket"
-            value={destinationBucket}
-            onChange={(e) => setDestinationBucket(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="endpointUrl">Endpoint URL:</label>
-          <input
-            type="text"
-            id="endpointUrl"
-            value={endpointUrl}
-            onChange={(e) => setEndpointUrl(e.target.value)}
-          />
+        <div className="input-fields">
+          <div className="form-group">
+            <label htmlFor="awsAccessKeyId">AWS Access Key ID:</label>
+            <input
+              type="text"
+              id="awsAccessKeyId"
+              value={awsAccessKeyId}
+              onChange={(e) => setAwsAccessKeyId(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="awsSecretAccessKey">AWS Secret Access Key:</label>
+            <input
+              type="text"
+              id="awsSecretAccessKey"
+              value={awsSecretAccessKey}
+              onChange={(e) => setAwsSecretAccessKey(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="regionName">Region Name:</label>
+            <input
+              type="text"
+              id="regionName"
+              value={regionName}
+              onChange={(e) => setRegionName(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="destinationBucket">Destination Bucket:</label>
+            <input
+              type="text"
+              id="destinationBucket"
+              value={destinationBucket}
+              onChange={(e) => setDestinationBucket(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="endpointUrl">Endpoint URL:</label>
+            <input
+              type="text"
+              id="endpointUrl"
+              value={endpointUrl}
+              onChange={(e) => setEndpointUrl(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Submit Button */}
-        <div>
+        <div className="submit-button">
           <button type="submit">Submit</button>
         </div>
       </form>
