@@ -55,6 +55,7 @@ def upload_endpoint():
 def upload_csv_endpoint():
     try:
         data = request.form.to_dict()
+        print(f"to debug upload_to_r2: {data}")
         aws_access_key_id = data['aws_access_key_id']
         aws_secret_access_key = data['aws_secret_access_key']
         region_name = data['region_name']
@@ -70,15 +71,11 @@ def upload_csv_endpoint():
 
             result = []
             for source_link in source_links:
-                result.append(upload_to_s3(destination_bucket=destination_bucket,
-                                           source_url=source_link,
-                                           aws_access_key_id=aws_access_key_id,
-                                           aws_secret_access_key=aws_secret_access_key,
-                                           region_name=region_name))
                 if endpoint_url.strip() == "":
                     result.append(upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name))
                 else:
-                    result.append(upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region=region_name, endpoint_url=endpoint_url))
+                    print("R2 being called")
+                    result.append(upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url))
 
             return jsonify({'result': result})
         else:

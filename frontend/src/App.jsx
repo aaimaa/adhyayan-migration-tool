@@ -1,13 +1,14 @@
-import { useState } from 'react'
-import './App.css'
+import VideoOperationsForm from './VideoOperationsForm';
+import CsvUploadForm from './CsvUploadForm';
 
-function App() {
-
+const App = () => {
   return (
-    <>
-     Hello from ranjan
-    </>
-  )
-}
+    <div>
+      <h1>Video Operations App</h1>
+      {/* <VideoOperationsForm /> */}
+      <CsvUploadForm />
+    </div>
+  );
+};
 
-export default App
+export default App;
