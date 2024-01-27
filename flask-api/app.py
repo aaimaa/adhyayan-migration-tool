@@ -1,4 +1,13 @@
+import os
+from datetime import datetime
+import csv
+
+from werkzeug.utils import secure_filename
+
 from flask import Flask, request, jsonify
+
+from flask_socketio import SocketIO
+
 from flask_cors import CORS  
 import pandas as pd
 from io import StringIO
@@ -10,7 +19,8 @@ from ffmpeg_convertor import upload_to_s3
 from ffmpeg_convertor import upload_to_r2
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/', methods=['GET'])
 def hello():
@@ -45,6 +55,8 @@ def upload_endpoint():
             result = upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
         else:
             result = upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
+            
+        socketio.emit('operation_complete', {'result': result, 'link': source_link})
         
         return jsonify({'result': result})
     except Exception as e:
@@ -68,14 +80,37 @@ def upload_csv_endpoint():
             csv_content = csv_file.read().decode('utf-8')
             df = pd.read_csv(StringIO(csv_content), header=None)
             source_links = df[0].tolist()
+            
+            filename = secure_filename(csv_file.filename).split('.')[0]
+            
+            current_datetime = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+            csv_filename = f"{current_datetime}_{filename}_upload_results.csv"
+            user_home = os.path.expanduser("~")
+            csv_filepath = os.path.join(user_home, "file_reports", csv_filename)
 
             result = []
             for source_link in source_links:
-                if endpoint_url.strip() == "":
-                    result.append(upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name))
-                else:
-                    print("R2 being called")
-                    result.append(upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url))
+                try: 
+                    if endpoint_url.strip() == "":
+                        success = upload_to_s3(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+                    else:
+                        success = upload_to_r2(destination_bucket=destination_bucket, source_url=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name, endpoint_url=endpoint_url)
+                    
+                    with open(csv_filepath, 'a', newline='') as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([source_link, success])
+                    
+                    result.append({'link': source_link, 'success': success})
+                    socketio.emit('operation_complete', {'link': source_link, 'success': success})
+                except Exception as e: 
+                    print(f"Error uploading {source_link}: {e}")
+                    result.append({'link': source_link, 'success': False})
+
+                    with open(csv_filepath, 'a', newline='') as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([source_link, success])
+                    
+                    socketio.emit('operation_complete', {'link': source_link, 'success': False})
 
             return jsonify({'result': result})
         else:
@@ -118,22 +153,45 @@ def convertor_csv_endpoint():
         
         endpoint_url = data['endpoint_url']
 
-        # Check if 'csv_file' is provided
         if 'csv_file' in request.files:
             csv_file = request.files['csv_file']
             csv_content = csv_file.read().decode('utf-8')
             df = pd.read_csv(StringIO(csv_content), header=None)
             source_links = df[0].tolist()
+            
+            filename = secure_filename(csv_file.filename).split('.')[0]
+            
+            current_datetime = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+            csv_filename = f"{current_datetime}_{filename}_resolution_conversion_results.csv"
+            user_home = os.path.expanduser("~")
+            csv_filepath = os.path.join(user_home, "file_reports", csv_filename)
         else:
             return jsonify({'error': 'CSV file not provided'})
 
         result = []
         for source_link in source_links:
-            if endpoint_url.strip() == "":
-                result.append(convert_video_resolution(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name))
-            else:
-                result.append(convert_video_resolution_r2(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name,endpoint_url=endpoint_url))
+            try:
+                if endpoint_url.strip() == "":
+                    success = convert_video_resolution(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+                else:
+                    success = convert_video_resolution_r2(destination_bucket=destination_bucket, source_link=source_link, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name,endpoint_url=endpoint_url)
+                
+                with open(csv_filepath, 'a', newline='') as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([source_link, success])
+                
+                result.append({'link': source_link, 'success': success})
+                socketio.emit('operation_complete', {'link': source_link, 'success': success})
+            except Exception as e:
+                print(f"Error uploading {source_link}: {e}")
+        
+                result.append({'link': source_link, 'success': False})
 
+                with open(csv_filepath, 'a', newline='') as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow([source_link, False])
+                            
+                socketio.emit('operation_complete', {'link': source_link, 'success': False})
         return jsonify({'result': result})
     except Exception as e:
         return jsonify({'error': str(e)})
@@ -173,21 +231,52 @@ def convertor_csv_hsl_endpoint():
             csv_content = csv_file.read().decode('utf-8')
             df = pd.read_csv(StringIO(csv_content), header=None)
             source_links = df[0].tolist()
+            
+            filename = secure_filename(csv_file.filename).split('.')[0]
+                
+            current_datetime = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+            csv_filename = f"{current_datetime}_{filename}_hsl_results.csv"
+            user_home = os.path.expanduser("~")
+            csv_filepath = os.path.join(user_home, "file_reports", csv_filename)
         else:
             return jsonify({'error': 'CSV file not provided'})
 
         result = []
         for source_link in source_links:
-            result.append(convert_video_hsl(destination_bucket=destination_bucket,
+            try:
+                success = convert_video_hsl(destination_bucket=destination_bucket,
                                             source_link=source_link,
                                             aws_access_key_id=aws_access_key_id,
                                             aws_secret_access_key=aws_secret_access_key,
                                             region_name=region_name,
-                                            endpoint_url=endpoint_url))
-
+                                            endpoint_url=endpoint_url)
+                result.append({'link': source_link, 'success': success})
+                
+                with open(csv_filepath, 'a', newline='') as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([source_link, success])
+                
+                socketio.emit('operation_complete', {'link': source_link, 'success': success})
+            except Exception as e:
+                print(f"error: {e}")
+                result.append({'link': source_link, 'success': success})
+                
+                with open(csv_filepath, 'a', newline='') as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([source_link, success])
+                    
+                socketio.emit('operation_complete', {'link': source_link, 'success': False})
         return jsonify({'result': result})
     except Exception as e:
+        print(f"error: {e}")
+        result.append({'link': source_link, 'success': success})
+                
+        with open(csv_filepath, 'a', newline='') as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow([source_link, success])
+                    
+        socketio.emit('operation_complete', {'link': source_link, 'success': False})
         return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+     socketio.run(app, debug=True)

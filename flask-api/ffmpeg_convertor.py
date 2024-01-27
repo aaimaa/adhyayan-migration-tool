@@ -39,10 +39,13 @@ def upload_to_r2(aws_access_key_id, aws_secret_access_key, region_name, destinat
             # Upload the streaming content to R2
             s3.upload_fileobj(response.raw, destination_bucket, file_name)
             print(f"Successfully streamed and uploaded '{file_name}' to '{destination_bucket}'.")
+            return True
         else:
             print(f"Failed to fetch the file from the URL. HTTP Status Code: {response.status_code}")
+            return False
     except Exception as e:
         print(f"Error uploading file to R2: {e}")
+        return False
     
 def convert_video_resolution(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link):
     
@@ -58,7 +61,7 @@ def convert_video_resolution(aws_access_key_id, aws_secret_access_key, region_na
         subprocess.run(['ffmpeg', '-version'], check=True)
     except FileNotFoundError:
         print("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
-        return
+        return False
 
     s3 = boto3.client('s3')
     
@@ -77,15 +80,20 @@ def convert_video_resolution(aws_access_key_id, aws_secret_access_key, region_na
             
             ffmpeg_command = f"ffmpeg -y -i {source_link} -vf 'scale={scale}' -c:a copy -c:v libx264 -profile:v high -level:v 4.2 -crf 18 -movflags frag_keyframe+empty_moov -f mp4 -"
 
-            # try:
-            # Open a stream for the FFmpeg command
-            with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, shell=True) as process:
-                    # Upload the stream to the destination S3 bucket
-                    s3.upload_fileobj(process.stdout, destination_bucket, destination_key)
+            try:
+                # Open a stream for the FFmpeg command
+                with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, shell=True) as process:   
+                        # Upload the stream to the destination S3 bucket
+                        s3.upload_fileobj(process.stdout, destination_bucket, destination_key)
+                        
+            except Exception as e:
+                return False
 
             print(f"Successfully converted and copied '{s3_source_key}' from '{s3_source_bucket}' to '{destination_key}' in '{destination_bucket}'.")
+        return True
     except Exception as e:
         print(f"Error converting video: {e}")
+        return False
    
 def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link, endpoint_url):
     
@@ -98,7 +106,7 @@ def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region
         subprocess.run(['ffmpeg', '-version'], check=True)
     except FileNotFoundError:
         print("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
-        return
+        return False
     
     resolutionsTuple = [
         ('426:240:flags=lanczos', '240'),
@@ -115,16 +123,19 @@ def convert_video_resolution_r2(aws_access_key_id, aws_secret_access_key, region
             
             ffmpeg_command = f"ffmpeg -y -i {source_link} -vf 'scale={scale}' -c:a copy -c:v libx264 -profile:v high -level:v 4.2 -crf 18 -movflags frag_keyframe+empty_moov -f mp4 -"
 
-            # try:
+            try:
             # Open a stream for the FFmpeg command
-            with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, shell=True) as process:
+                with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, shell=True) as process:
                     # Upload the stream to the destination S3 bucket
                     s3.upload_fileobj(process.stdout, destination_bucket, destination_key)
-
-            print(f"Successfully converted and copied '{source_link}' to '{destination_key}' in '{destination_bucket}'.")
+            except Exception as e:
+                return False
+        print(f"Successfully converted and copied '{source_link}' to '{destination_key}' in '{destination_bucket}'.")
+        return True
     except Exception as e:
         print(f"Error converting video: {e}")
-
+        return False
+    
 def convert_video_hsl(aws_access_key_id, aws_secret_access_key, region_name, destination_bucket, source_link, endpoint_url):
     print("Current working directory:", os.getcwd())
     try:
@@ -132,8 +143,10 @@ def convert_video_hsl(aws_access_key_id, aws_secret_access_key, region_name, des
         subprocess.run(['ffmpeg', '-version'], check=True)
     except subprocess.CalledProcessError:
         raise Exception("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
+        return False
     except FileNotFoundError:
         raise Exception("Error: FFmpeg is not installed. Please install FFmpeg on your VM.")
+        return False
 
     split_str = source_link.split('/')
     # s3_source_key = split_str[3]
@@ -166,48 +179,53 @@ def convert_video_hsl(aws_access_key_id, aws_secret_access_key, region_name, des
     
     for resolution in resolutions:
         os.makedirs(f'{resolution}_output', exist_ok=True)
+    try:
+        for resolution in resolutions:
+            output_playlist = f'{resolution}_output/out.m3u8'
+            ffmpeg_command = f'ffmpeg -y -i {source_link} -vf "scale={resolution_dict[resolution]}" -c:v h264 -hls_time 10 -hls_list_size 0 -hls_flags single_file -f hls -c:a aac -strict experimental -b:a 192k -hls_playlist_type vod -hls_segment_type fmp4 {output_playlist}'
 
-    for resolution in resolutions:
-        output_playlist = f'{resolution}_output/out.m3u8'
-        ffmpeg_command = f'ffmpeg -y -i {source_link} -vf "scale={resolution_dict[resolution]}" -c:v h264 -hls_time 10 -hls_list_size 0 -hls_flags single_file -f hls -c:a aac -strict experimental -b:a 192k -hls_playlist_type vod -hls_segment_type fmp4 {output_playlist}'
+            print(f"Running FFmpeg command: {ffmpeg_command}")
+            result = subprocess.run(ffmpeg_command, shell=True, stderr=subprocess.PIPE, text=True)
 
-        print(f"Running FFmpeg command: {ffmpeg_command}")
-        result = subprocess.run(ffmpeg_command, shell=True, stderr=subprocess.PIPE, text=True)
+            if result.returncode != 0:
+                print(f"Error running FFmpeg:\n{result.stderr}")
+                raise Exception("Error running FFmpeg.")
+                return False
 
-        if result.returncode != 0:
-            print(f"Error running FFmpeg:\n{result.stderr}")
-            raise Exception("Error running FFmpeg.")
+            temp_folder_path = os.path.join(os.getcwd(), f'{resolution}_output')
 
-        temp_folder_path = os.path.join(os.getcwd(), f'{resolution}_output')
+            files = os.listdir(temp_folder_path)
 
-        files = os.listdir(temp_folder_path)
+            # Upload each file to S3
+            for file in files:
+                file_path = os.path.join(temp_folder_path, file)
 
-        # Upload each file to S3
-        for file in files:
-            file_path = os.path.join(temp_folder_path, file)
+                # Read the file content
+                with open(file_path, 'rb') as file_content:
+                    # Specify the S3 key (object key)
+                    s3_key = f'{s3_source_basename}/{resolution}/{file}'
 
-            # Read the file content
-            with open(file_path, 'rb') as file_content:
-                # Specify the S3 key (object key)
-                s3_key = f'{s3_source_basename}/{resolution}/{file}'
+                    # Upload the file to S3
+                    s3_client.upload_fileobj(file_content, destination_bucket, s3_key)
 
-                # Upload the file to S3
-                s3_client.upload_fileobj(file_content, destination_bucket, s3_key)
+                    print(f'File {file} uploaded to S3.')
 
-                print(f'File {file} uploaded to S3.')
-
-            # Remove the file after successful upload
-            try:
-                os.remove(file_path)
-                print(f'File {file} removed.')
-            except Exception as e:
-                print(f"Error removing file {file}: {e}")
-        
-    for resolution in resolutions:
-        os.rmdir(f'{resolution}_output')
-        print(f'Directory {resolution}_output removed.')
+                # Remove the file after successful upload
+                try:
+                    os.remove(file_path)
+                    print(f'File {file} removed.')
+                except Exception as e:
+                    print(f"Error removing file {file}: {e}")
+            
+        for resolution in resolutions:
+            os.rmdir(f'{resolution}_output')
+            print(f'Directory {resolution}_output removed.')
+    except Exception as e:
+        print(f"failed to do operation due to exception: {e}")
+        return False
 
     print("Operation successful")
+    return True
 
 
 def main():
