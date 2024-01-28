@@ -3,4 +3,5 @@ Flask-Cors
 boto3
 flask-socketio
 pandas
+werkzeug
 requests

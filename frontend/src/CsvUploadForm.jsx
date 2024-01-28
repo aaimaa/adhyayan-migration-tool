@@ -18,9 +18,10 @@ const CsvUploadForm = () => {
 
   const [socketResult, updateSocketResult] = useState([]);
 
+
+  // it will Connect to the WebSocket when the component mounts
   useEffect(() => {
-    // Connect to the WebSocket when the component mounts
-    const newSocket = io('http://127.0.0.1:5000');
+    const newSocket = io(import.meta.env.API);
     setSocket(newSocket);
   
     console.log('WebSocket connected');
@@ -29,9 +30,8 @@ const CsvUploadForm = () => {
     return () => newSocket.disconnect();
   }, []);  
 
-
+  // it will Listen for the 'operation_complete' event from the server
   useEffect(() => {
-    // Listen for the 'upload_complete' event from the server
     if (socket) {
       socket.on('operation_complete', (data) => {
         console.log('Upload completed for link:', data.link, data.success);
@@ -40,7 +40,6 @@ const CsvUploadForm = () => {
             link: data.link,
             success: data.success
           }])
-        // Update your UI or trigger any necessary actions based on the completed upload
       });
 
       console.log('Event listener added for upload_complete');
@@ -54,7 +53,6 @@ const CsvUploadForm = () => {
 
   const handleUploadOptionChange = (option) => {
     setUploadOption(option);
-    // Clear file and sourceLink when switching options
     setFile(null);
     setSourceLink('');
   };
@@ -66,7 +64,7 @@ const CsvUploadForm = () => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
 
-    const apiUrl = 'http://127.0.0.1:5000';
+    const apiUrl = import.meta.env.API;
 
     let endpoint = '';
 
@@ -134,7 +132,6 @@ const CsvUploadForm = () => {
     <div className="csv-upload-form-container">
       <h2 className='heading'>Video Operations App</h2>
       <form onSubmit={handleFormSubmit} className="upload-form">
-        {/* Upload Option Radio Buttons */}
         <div className="upload-option">
           <label>
             <input
@@ -168,7 +165,6 @@ const CsvUploadForm = () => {
           )}
         </div>
 
-        {/* Action Dropdown */}
         <div className="action-option">
           <label>Action:</label>
           <select
@@ -182,7 +178,6 @@ const CsvUploadForm = () => {
           </select>
         </div>
 
-        {/* AWS Credentials and Other Input Fields */}
         <div className="input-fields">
           <div className="form-group">
             <label htmlFor="awsAccessKeyId">AWS Access Key ID:</label>
@@ -231,7 +226,6 @@ const CsvUploadForm = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
         <div className="submit-button">
           <button type="submit">Submit</button>
         </div>
