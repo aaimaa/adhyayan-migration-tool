@@ -21,7 +21,7 @@ const CsvUploadForm = () => {
 
   // it will Connect to the WebSocket when the component mounts
   useEffect(() => {
-    const newSocket = io(import.meta.env.API);
+    const newSocket = io('http://20.193.144.175');
     setSocket(newSocket);
   
     console.log('WebSocket connected');
@@ -64,7 +64,7 @@ const CsvUploadForm = () => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
 
-    const apiUrl = import.meta.env.API;
+    const apiUrl = 'http://20.193.144.175';
 
     let endpoint = '';
 
